@@ -2,6 +2,8 @@
   <head>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://unpkg.com/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
+    <script src="https://cdn.rawgit.com/donmccurdy/aframe-extras/v4.1.2/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/super-hands@^3.0.1/dist/super-hands.min.js"></script>
 
 
     <script>
@@ -40,16 +42,106 @@
         })
 
     </script>
+    <script>
+        AFRAME.registerComponent("wallable", {
+            
+        init: function() {
+            let sceneEl = this.el
+            var refspace = sceneEl.systems.webxr.sessionReferenceSpaceType;
+            console.log("i wanna get the thing")
+            console.log(sceneEl.systems.webxr.sessionReferenceSpaceType)
+            console.log(sceneEl.systems)
+            sceneEl.systems['tracked-controls-webxr'].updateReferenceSpace()
+            // let bounds = sceneEl.systems['tracked-controls-webxr'].referenceSpace.boundsGeometry
+            // console.log(bounds)
+            // let objects = document.querySelectorAll('#box_wall')
+            // for (let i = 0; i < objects.length; i++){
+            //     objects[i].setAttribute('position', {x: bounds[i].x, y: 0.25, z: bounds[i].y});
+            // }
+        }
+        })
+
+    </script>
+    <script>
+    // define a custom component
+        AFRAME.registerComponent('thumbstick-logging',{
+            init: function () {
+                this.el.addEventListener('thumbstickmoved', this.logThumbstick);
+
+            },
+            logThumbstick: function (evt) {
+                var rig = document.querySelector("#rig")
+                var player = document.querySelector("#camera")
+                var angle = player.getAttribute("rotation")
+                var x = (-evt.detail.y)/25 * Math.cos(angle.y * Math.PI / 180)
+                var y = (-evt.detail.y)/25 * Math.sin(angle.y * Math.PI / 180)
+                var pos = rig.getAttribute("position")
+                pos.x -= y;
+                pos.z -= x;
+                rig.setAttribute("position", pos);
+                // !!! NOTE - it would be more efficient to do the
+                // position change on the players THREE.Object:
+                // `player.object3D.position.add(direction)`
+                // but it would break "getAttribute("position")
+            }
+        });
+    </script>
+    <script>
+                AFRAME.registerComponent('mqtt-logger', {
+            init: function () {
+                console.log(mqtt)
+                this.options = {
+                    // Clean session
+                    clean: true,
+                    connectTimeout: 4000,
+                    // Auth
+                    clientId: 'vr_game_test',
+                    username: 'myclient',
+                    password: 'password',
+                }
+                console.log("im here now")
+                this.client  = mqtt.connect('broker.hivemq.com:8000')
+            },
+
+            tick: function () {
+                var left_controller = this.el.querySelector("#left_controller")
+                var right_controller = this.el.querySelector("#right_controller")
+                var headset = this.el.querySelector("#camera")
+                this.client.publish('hbo_ict_vr_game_left_position', left_controller.getAttribute('position'))
+                this.client.publish('hbo_ict_vr_game_right_position', right_controller.getAttribute('position'))
+                this.client.publish('hbo_ict_vr_game_head_position', headset.getAttribute("position"))
+
+                this.client.publish('hbo_ict_vr_game_left_rotation', left_controller.getAttribute('rotation'))
+                this.client.publish('hbo_ict_vr_game_right_rotation', right_controller.getAttribute('rotation'))
+                this.client.publish('hbo_ict_vr_game_head_rotation', headset.getAttribute('rotation'))
+                
+            },
+
+            remove: function () {
+                this.client.end()
+            }
+
+
+        });
+    </script>
 </head>
 
   </head>
   <body>
-    <a-scene cursor="rayOrigin:mouse">
-      <a-box position="-10 0.25 0" rotation="0 0 0" scale="0.5 0.5 20" color="#4CC3D9"></a-box>
-      <a-box position="10 0.25 0" rotation="0 0 0" scale="0.5 0.5 20" color="#4CC3D9"></a-box>
-      <a-box position="0 0.25 -9.75" rotation="0 0 0" scale="20 0.5 0.5" color="#4CC3D9"></a-box>
-      <a-box position="0 0.25 9.75" rotation="0 0 0" scale="20 0.5 0.5" color="#4CC3D9"></a-box>
+    <a-scene wallable cursor="rayOrigin:mouse" renderer="colorManagement: true"  webxr="referenceSpaceType: bounded-floor; requiredFeatures: bounded-floor; optionalFeatures: XRBoundedReferenceSpace;">
 
+        <a-assets>
+            <a-asset-item id="tree" src="tree5.glb"></a-asset-item>
+          </a-assets>
+
+          <a-entity id="env_walls">
+            <a-box id="box_wall" position="-10 0.25 0" rotation="0 0 0" scale="0.5 0.5 20" color="#4CC3D9"></a-box>
+            <a-box id="box_wall" position="10 0.25 0" rotation="0 0 0" scale="0.5 0.5 20" color="#4CC3D9"></a-box>
+            <a-box id="box_wall" position="0 0.25 -9.75" rotation="0 0 0" scale="20 0.5 0.5" color="#4CC3D9"></a-box>
+            <a-box id="box_wall" position="0 0.25 9.75" rotation="0 0 0" scale="20 0.5 0.5" color="#4CC3D9"></a-box>
+          </a-entity>
+      
+      
 
       <a-box position="0 0.5 -5" rotation="0 0 0" scale="0.3 1 0.3" color="#050505"></a-box>
       <a-box position="0 1 -5" rotation="0 0 0" scale="0.2 0.2 0.2" color="tomato" start_thing class="clickable" ></a-box>
@@ -66,10 +158,22 @@
             >
       </a-torus>
 
+      <a-box id="lolbox" color="blue" position="0 0.5 -1"></a-box>
+      <a-entity gltf-model="#tree" position="7 0 0" scale="2 2 2"></a-entity>
 
+      <a-entity light="type: ambient; color: #FFFFFF"></a-entity>
       <a-plane position="0 0.045 0" rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
-      <a-entity environment="preset: forest; dressingAmount: 500"></a-entity>
+      <a-entity environment="preset: forest; dressingAmount: 10"></a-entity>
       <a-sky color="#ECECEC"></a-sky>
+
+      <a-entity id="rig">
+        <a-entity id="camera" camera look-controls></a-entity>
+        <a-entity id="left_controller" oculus-touch-controls="hand: left" thumbstick-logging></a-entity>
+        <a-entity id="right_controller" oculus-touch-controls="hand: right" thumbstick-logging></a-entity>
+      </a-entity>
+      
+      
+
 
     </a-scene>
   </body>

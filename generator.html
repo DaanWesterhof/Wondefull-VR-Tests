@@ -1,0 +1,94 @@
+<html>
+  <head>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://unpkg.com/aframe-environment-component/dist/aframe-environment-component.min.js"></script>
+    <script src="https://cdn.rawgit.com/donmccurdy/aframe-extras/v4.1.2/dist/aframe-extras.min.js"></script>
+    <script src="https://unpkg.com/super-hands@^3.0.1/dist/super-hands.min.js"></script>
+    <script>
+        AFRAME.registerComponent('thumbstick-logging',{
+            init: function () {
+                this.el.addEventListener('thumbstickmoved', this.logThumbstick);
+                var player = document.querySelector("#rig")
+                var direction = new THREE.Vector3();
+
+            },
+            logThumbstick: function (evt) {
+                this.el.sceneEl.camera.getWorldDirection(direction);
+                // multiply the direction by a "speed" factor
+                direction.multiplyScalar((-evt.detail.y)/10)
+                // get the current position
+                var pos = rig.getAttribute("position")
+                // add the direction vector
+                pos.add(direction)
+                // set the new position
+                player.setAttribute("position", pos);
+            }
+        });
+    </script>
+    <script>
+        AFRAME.registerComponent('generate_cubes',{
+            init: function () {
+                var scene = document.querySelector('a-scene');
+                for (let i = 0; i < 400; i++){
+                    var cylinder = document.createElement('a-cylinder');
+                    cylinder.setAttribute('color', '#FF9500');
+                    cylinder.setAttribute('height', '1');
+                    cylinder.setAttribute('radius', '0.2');
+                    var pos = new THREE.Vector3();
+                    pos.x = i %20;
+                    pos.z = i /20
+                    pos.y = 1
+                    cylinder.setAttribute('position', pos);
+                    scene.appendChild(cylinder);
+                }
+                
+
+            },
+        });    
+    </script>
+
+<script>
+    AFRAME.registerComponent('update_cubes',{
+        tick: function () {
+            var scene = document.querySelector('a-scene');
+            var objects = scene.querySelectorAll('#gentree')
+            var player = document.querySelector("#rig")
+            var pos = rig.getAttribute("position")
+            var len = 10*4
+            for (let i = 0; i < objects.length; i++){
+                var boom_pos = objects[i].getAttribute('position');
+                if (abs(pos.x - boom_pos.x) > len /2){
+                    if (pos.x - boom_pos.x > 0){
+                        boom_pos.x += len
+                    }else{
+                        boom_pos.x -= len
+                    }
+                }
+                if (abs(pos.z - boom_pos.z) > len /2){
+                    if (pos.z - boom_pos.z > 0){
+                        boom_pos.z += len
+                    }else{
+                        boom_pos.z -= len
+                    }
+                }
+            }
+        },
+    });    
+</script>
+</head>
+
+  </head>
+  <body>
+    <a-scene generate_cubes >
+
+        <a-entity id="rig">
+            <a-entity id="camera" camera look-controls></a-entity>
+            <a-entity oculus-touch-controls="hand: left" thumbstick-logging></a-entity>
+            <a-entity oculus-touch-controls="hand: right" thumbstick-logging></a-entity>
+        </a-entity>
+
+      
+    
+    </a-scene>
+  </body>
+</html>
